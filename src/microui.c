@@ -568,6 +568,11 @@ void mu_layout_height(mu_Context *ctx, int height) {
 }
 
 
+int mu_height_left(mu_Context* ui) {
+    mu_Layout* layout = get_layout(ui);
+    return layout->body.h - layout->next_row;
+}
+
 void mu_layout_set_next(mu_Context *ctx, mu_Rect r, int relative) {
   mu_Layout *layout = get_layout(ctx);
   layout->next = r;
@@ -729,10 +734,10 @@ void mu_label(mu_Context *ctx, const char *text) {
 }
 
 
-int mu_button_ex(mu_Context *ctx, const char *label, int icon, int opt) {
+int mu_button_ex(mu_Context *ctx, const char *label, mu_OptionalSelector* selector, int icon, int opt) {
   int res = 0;
-  mu_Id id = label ? mu_get_id(ctx, label, strlen(label))
-                   : mu_get_id(ctx, &icon, sizeof(icon));
+  mu_Id id = selector->s ? mu_get_id(ctx, selector->s, strlen(selector->s))
+                   : mu_get_id(ctx, label, strlen(label));
   mu_Rect r = mu_layout_next(ctx);
   mu_update_control(ctx, id, r, opt);
   /* handle click */
@@ -822,9 +827,12 @@ int mu_textbox_raw(mu_Context *ctx, char *buf, int bufsz, mu_Id id, mu_Rect r,
 
 
 static int number_textbox(mu_Context *ctx, mu_Real *value, mu_Rect r, mu_Id id) {
-  if (ctx->mouse_pressed == MU_MOUSE_LEFT && ctx->key_down & MU_KEY_SHIFT &&
-      ctx->hover == id
-  ) {
+
+  bool left_shift_click = ctx->mouse_pressed == MU_MOUSE_LEFT && ctx->key_down & MU_KEY_SHIFT &&
+      ctx->hover == id;
+  bool right_click = ctx->mouse_pressed == MU_MOUSE_RIGHT &&
+           ctx->hover == id;
+  if ( left_shift_click || right_click ) {
     ctx->number_edit = id;
     sprintf(ctx->number_edit_buf, MU_REAL_FMT, *value);
   }
@@ -847,6 +855,7 @@ int mu_textbox_ex(mu_Context *ctx, char *buf, int bufsz, int opt) {
   mu_Rect r = mu_layout_next(ctx);
   return mu_textbox_raw(ctx, buf, bufsz, id, r, opt);
 }
+
 
 
 int mu_slider_ex(mu_Context *ctx, mu_Real *value, mu_Real low, mu_Real high,
@@ -872,6 +881,10 @@ int mu_slider_ex(mu_Context *ctx, mu_Real *value, mu_Real low, mu_Real high,
     v = low + (ctx->mouse_pos.x - base.x) * (high - low) / base.w;
     if (step) { v = ((long long)((v + step / 2) / step)) * step; }
   }
+  /* return if right clicked */
+  if (ctx->focus == id &&
+      (ctx->mouse_down | ctx->mouse_pressed) == MU_MOUSE_RIGHT)
+      res |= MU_RES_ACTIVE;
   /* clamp and store value, update res */
   *value = v = mu_clamp(v, low, high);
   if (last != v) { res |= MU_RES_CHANGE; }
@@ -1205,4 +1218,104 @@ void mu_begin_panel_ex(mu_Context *ctx, const char *name, int opt) {
 void mu_end_panel(mu_Context *ctx) {
   mu_pop_clip_rect(ctx);
   pop_container(ctx);
+}
+
+
+// ADDITIONS
+
+void mu_toggle_dropdown(mu_Context *ctx, const char *name, int size) {
+  mu_Container *cnt = mu_get_container(ctx, name);
+  /* set as hover root so popup isn't closed in begin_window_ex()  */
+  ctx->hover_root = ctx->next_hover_root = cnt;
+  /* position at mouse cursor, open and bring-to-front */
+  mu_Rect par = ctx->last_rect;
+  cnt->rect = mu_rect(par.x, par.h + par.y, par.w, size);
+  cnt->open = !cnt->open;
+  mu_bring_to_front(ctx, cnt);
+}
+
+int mu_begin_dropdown(mu_Context *ctx, const char *name) {
+  int opt = MU_OPT_POPUP | MU_OPT_NORESIZE |
+             MU_OPT_NOTITLE | MU_OPT_CLOSED;
+
+  //mu_Container *cnt = mu_get_container(ctx, name);
+  int result = mu_begin_window_ex(ctx, name, mu_rect(0, 0, 0, 0), opt);
+  mu_Container *cnt = mu_get_container(ctx, name);
+  cnt->open = false;
+  return result;
+}
+
+void mu_end_dropdown(mu_Context* ctx) {
+    mu_end_window(ctx);
+}
+
+
+// RULERS FOR ROW LAYOUTS
+
+mu_Ruler mu_pixels(int pixels) {
+    mu_Ruler r = { .type = MU_RULER_PIXELS, .size.pixels = pixels }; return r;
+}
+
+mu_Ruler mu_percent(float percent) {
+    mu_Ruler r = { .type = MU_RULER_PERCENT, .size.percent = percent }; return r;
+}
+
+mu_Ruler mu_percent_left(float percent) {
+    mu_Ruler r = { .type = MU_RULER_PERCENT_LEFT, .size.percent = percent }; return r;
+}
+
+
+mu_Ruler mu_expand(void) {
+    mu_Ruler r = { .type = MU_RULER_EXPAND }; return r;
+}
+
+
+void mu_layout_row_ruler(mu_Context *ctx, int items, const mu_Ruler *widths, int height) {
+  mu_Layout *layout = get_layout(ctx);
+  if (widths) {
+    int widths_out[MU_MAX_WIDTHS] = {0};
+    expect(items <= MU_MAX_WIDTHS);
+    
+    int left_over = layout->body.w;
+    int expand_elements = 0;
+    int body_width = layout->body.w - ctx->_style.padding + 1; // why is it not pixel perfect RXI??? >:(
+    // pre process pixel and percent first
+    for(int i = 0; i < items; i++) {
+        int width = 0;
+        if(widths[i].type == MU_RULER_PIXELS) 
+            width = widths[i].size.pixels;
+        else if(widths[i].type == MU_RULER_PERCENT) 
+            width =  body_width * widths[i].size.percent;
+        else {
+            expand_elements++;
+            continue;
+        }
+
+        widths_out[i] = width;
+        left_over -= width;
+    }
+
+    // then pre-process percent from left-overs
+    for(int i = 0; i < items; i++) {
+        int width = 0;
+        if(widths[i].type == MU_RULER_PERCENT_LEFT) 
+            width = widths[i].size.percent * left_over;
+        else continue;
+        widths_out[i] = width;
+        left_over -= width;
+    }
+
+    // at the end all expand elements are sharing space
+    for(int i = 0; i < items && expand_elements && left_over; i++) {
+        if(widths[i].type == MU_RULER_EXPAND)
+            widths_out[i] = left_over / expand_elements;
+    }
+
+
+    memcpy(layout->widths, widths_out, items * sizeof(widths_out[0]));
+  }
+  layout->items = items;
+  layout->position = mu_vec2(layout->indent, layout->next_row);
+  layout->size.y = height;
+  layout->item_index = 0;
 }

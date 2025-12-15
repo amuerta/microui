@@ -28,6 +28,8 @@
 #define mu_min(a, b)            ((a) < (b) ? (a) : (b))
 #define mu_max(a, b)            ((a) > (b) ? (a) : (b))
 #define mu_clamp(x, a, b)       mu_min(b, mu_max(a, x))
+#define mu_va_wrap(T,...)       ((T []) {__VA_ARGS__})
+#define mu_arrlen(A)            (sizeof(A)/sizeof(*A))
 
 enum {
   MU_CLIP_PART = 1,
@@ -105,6 +107,15 @@ enum {
   MU_KEY_RETURN       = (1 << 4)
 };
 
+// ADDITIONS
+
+enum {
+    MU_RULER_PIXELS,
+    MU_RULER_PERCENT,
+    MU_RULER_PERCENT_LEFT,
+    MU_RULER_EXPAND
+};
+
 
 typedef struct mu_Context mu_Context;
 typedef unsigned mu_Id;
@@ -115,6 +126,7 @@ typedef struct { int x, y; } mu_Vec2;
 typedef struct { int x, y, w, h; } mu_Rect;
 typedef struct { unsigned char r, g, b, a; } mu_Color;
 typedef struct { mu_Id id; int last_update; } mu_PoolItem;
+typedef struct {const char* s;} mu_OptionalSelector;
 
 typedef struct { int type, size; } mu_BaseCommand;
 typedef struct { mu_BaseCommand base; void *dst; } mu_JumpCommand;
@@ -146,6 +158,18 @@ typedef struct {
   int next_type;
   int indent;
 } mu_Layout;
+
+// ADDITIONS
+
+typedef struct {
+    int type;
+    union {
+        int   pixels;
+        float percent;
+    } size;
+} mu_Ruler;
+
+
 
 typedef struct {
   mu_Command *head, *tail;
@@ -217,6 +241,11 @@ mu_Vec2 mu_vec2(int x, int y);
 mu_Rect mu_rect(int x, int y, int w, int h);
 mu_Color mu_color(int r, int g, int b, int a);
 
+mu_Ruler mu_expand(void);
+mu_Ruler mu_pixels(int pixels);
+mu_Ruler mu_percent(float percent);
+mu_Ruler mu_percent_left(float percent);
+
 void mu_init(mu_Context *ctx);
 void mu_begin(mu_Context *ctx);
 void mu_end(mu_Context *ctx);
@@ -252,20 +281,37 @@ void mu_draw_box(mu_Context *ctx, mu_Rect rect, mu_Color color);
 void mu_draw_text(mu_Context *ctx, mu_Font font, const char *str, int len, mu_Vec2 pos, mu_Color color);
 void mu_draw_icon(mu_Context *ctx, int id, mu_Rect rect, mu_Color color);
 
+#define mu_row(ui, height, ...)   mu_layout_row(ui,\
+        mu_arrlen(mu_va_wrap(const int, __VA_ARGS__)),\
+        mu_va_wrap(const int, __VA_ARGS__),\
+        height)
+
+#define mu_row_ruler(ui, height, ...)   mu_layout_row_ruler(ui,\
+        mu_arrlen(mu_va_wrap(const mu_Ruler, __VA_ARGS__)),\
+        mu_va_wrap(const mu_Ruler, __VA_ARGS__),\
+        height)
+
 void mu_layout_row(mu_Context *ctx, int items, const int *widths, int height);
+void mu_layout_row_ruler(mu_Context *ctx, int items, const mu_Ruler *widths, int height);
 void mu_layout_width(mu_Context *ctx, int width);
 void mu_layout_height(mu_Context *ctx, int height);
+int  mu_height_left(mu_Context* ui);
 void mu_layout_begin_column(mu_Context *ctx);
 void mu_layout_end_column(mu_Context *ctx);
 void mu_layout_set_next(mu_Context *ctx, mu_Rect r, int relative);
 mu_Rect mu_layout_next(mu_Context *ctx);
+
+
 
 void mu_draw_control_frame(mu_Context *ctx, mu_Id id, mu_Rect rect, int colorid, int opt);
 void mu_draw_control_text(mu_Context *ctx, const char *str, mu_Rect rect, int colorid, int opt);
 int mu_mouse_over(mu_Context *ctx, mu_Rect rect);
 void mu_update_control(mu_Context *ctx, mu_Id id, mu_Rect rect, int opt);
 
-#define mu_button(ctx, label)             mu_button_ex(ctx, label, 0, MU_OPT_ALIGNCENTER)
+
+#define mu_optional_selector(...)            (mu_OptionalSelector[1]){__VA_ARGS__}
+
+#define mu_button(ctx, label, ...)        mu_button_ex(ctx, label, mu_optional_selector(__VA_ARGS__), 0, MU_OPT_ALIGNCENTER)
 #define mu_textbox(ctx, buf, bufsz)       mu_textbox_ex(ctx, buf, bufsz, 0)
 #define mu_slider(ctx, value, lo, hi)     mu_slider_ex(ctx, value, lo, hi, 0, MU_SLIDER_FMT, MU_OPT_ALIGNCENTER)
 #define mu_number(ctx, value, step)       mu_number_ex(ctx, value, step, MU_SLIDER_FMT, MU_OPT_ALIGNCENTER)
@@ -274,9 +320,13 @@ void mu_update_control(mu_Context *ctx, mu_Id id, mu_Rect rect, int opt);
 #define mu_begin_window(ctx, title, rect) mu_begin_window_ex(ctx, title, rect, 0)
 #define mu_begin_panel(ctx, name)         mu_begin_panel_ex(ctx, name, 0)
 
+
+void mu_open_dropdown_ex(mu_Context *ctx, const char *name, int size);
+int mu_begin_dropdown(mu_Context *ctx, const char *name);
+void mu_end_dropdown(mu_Context* ctx);
 void mu_text(mu_Context *ctx, const char *text);
 void mu_label(mu_Context *ctx, const char *text);
-int mu_button_ex(mu_Context *ctx, const char *label, int icon, int opt);
+int mu_button_ex(mu_Context *ctx, const char *label, mu_OptionalSelector *selector, int icon, int opt);
 int mu_checkbox(mu_Context *ctx, const char *label, int *state);
 int mu_textbox_raw(mu_Context *ctx, char *buf, int bufsz, mu_Id id, mu_Rect r, int opt);
 int mu_textbox_ex(mu_Context *ctx, char *buf, int bufsz, int opt);
@@ -292,5 +342,20 @@ int mu_begin_popup(mu_Context *ctx, const char *name);
 void mu_end_popup(mu_Context *ctx);
 void mu_begin_panel_ex(mu_Context *ctx, const char *name, int opt);
 void mu_end_panel(mu_Context *ctx);
+
+
+// ADDITIONS
+
+#define mu_slider_impl(FN_NAME, T)\
+    static int FN_NAME(mu_Context *ctx, T *value, int low, int high) {\
+      static float tmp;\
+      mu_push_id(ctx, &value, sizeof(value));\
+      tmp = *value;\
+      int res = mu_slider_ex(ctx, &tmp, low, high, 0, "%.0f", MU_OPT_ALIGNCENTER);\
+      *value = tmp;\
+      mu_pop_id(ctx);\
+      return res;\
+    }
+
 
 #endif

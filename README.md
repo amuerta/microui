@@ -1,6 +1,14 @@
 # ![microui](https://user-images.githubusercontent.com/3920290/75171571-be83c500-5723-11ea-8a50-504cc2ae1109.png)
 A *tiny*, portable, immediate-mode UI library written in ANSI C
 
+> [!NOTE]
+> THIS PROJECTS AUTHOR IS RXI NOT ME, CHECK OUT HIS WORK FIRST,
+> IT'S IMPORTANT CAUSE I DON'T KNOW HOW FORKING WORKS IN GITHUB.
+
+I love this little library, however it has some flaws due to the minimal
+size due to being a recreational project. I wanna use it, as i am too lazy to make
+something similar myself (for now). Thus i edited it and added a copy as a repo.
+
 ## Features
 * Tiny: around `1100 sloc` of ANSI C
 * Works within a fixed-sized memory region: no additional memory is allocated
