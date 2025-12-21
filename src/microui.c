@@ -180,6 +180,7 @@ void mu_end(mu_Context *ctx) {
   }
 
   /* reset input state */
+  ctx->key_down = 0;
   ctx->key_pressed = 0;
   ctx->input_text[0] = '\0';
   ctx->mouse_pressed = 0;
@@ -400,9 +401,11 @@ void mu_input_scroll(mu_Context *ctx, int x, int y) {
   ctx->scroll_delta.y += y;
 }
 
+void mu_input_keypressed(mu_Context *ctx, int key) {
+  ctx->key_pressed |= key;
+}
 
 void mu_input_keydown(mu_Context *ctx, int key) {
-  ctx->key_pressed |= key;
   ctx->key_down |= key;
 }
 
@@ -471,6 +474,22 @@ void mu_draw_rect(mu_Context *ctx, mu_Rect rect, mu_Color color) {
     cmd->rect.rect = rect;
     cmd->rect.color = color;
   }
+}
+
+// ADDITION:
+void mu_draw_rect_lines(mu_Context* ctx, mu_Rect rect, int width, mu_Color color) {
+    width = abs(width);
+    mu_Rect r = rect;
+    mu_Rect 
+        left    = { r.x, r.y, width, r.h },
+        right   = { r.x + r.w - width, r.y, width, r.h },
+        top     = { r.x, r.y, r.w, width},
+        bottom  = { r.x, r.y + r.h - width, r.w, width};
+
+    mu_draw_rect(ctx, left, color);
+    mu_draw_rect(ctx, right, color);
+    mu_draw_rect(ctx, top, color);
+    mu_draw_rect(ctx, bottom, color);
 }
 
 

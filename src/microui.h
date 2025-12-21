@@ -101,10 +101,17 @@ enum {
 
 enum {
   MU_KEY_SHIFT        = (1 << 0),
-  MU_KEY_CTRL         = (1 << 1),
-  MU_KEY_ALT          = (1 << 2),
-  MU_KEY_BACKSPACE    = (1 << 3),
-  MU_KEY_RETURN       = (1 << 4)
+  MU_KEY_SHIFT_RIGHT  = (1 << 1),
+  MU_KEY_CTRL         = (1 << 2),
+  MU_KEY_CTRL_RIGHT   = (1 << 3),
+  MU_KEY_ALT          = (1 << 4),
+  MU_KEY_ALT_RIGHT    = (1 << 5),
+  MU_KEY_BACKSPACE    = (1 << 6),
+  MU_KEY_RETURN       = (1 << 7),
+  MU_KEY_UP           = (1 << 8),
+  MU_KEY_DOWN         = (1 << 9),
+  MU_KEY_LEFT         = (1 << 10),
+  MU_KEY_RIGHT        = (1 << 11),
 };
 
 // ADDITIONS
@@ -277,6 +284,7 @@ mu_Command* mu_push_command(mu_Context *ctx, int type, int size);
 int mu_next_command(mu_Context *ctx, mu_Command **cmd);
 void mu_set_clip(mu_Context *ctx, mu_Rect rect);
 void mu_draw_rect(mu_Context *ctx, mu_Rect rect, mu_Color color);
+void mu_draw_rect_lines(mu_Context *ctx, mu_Rect rect, int width, mu_Color color);
 void mu_draw_box(mu_Context *ctx, mu_Rect rect, mu_Color color);
 void mu_draw_text(mu_Context *ctx, mu_Font font, const char *str, int len, mu_Vec2 pos, mu_Color color);
 void mu_draw_icon(mu_Context *ctx, int id, mu_Rect rect, mu_Color color);

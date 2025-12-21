@@ -133,12 +133,27 @@ void mu_rl_events(mu_Context* ctx) {
     if (IsMouseButtonUp(MOUSE_BUTTON_RIGHT))
         mu_input_mouseup(ctx, mv.x, mv.y, MU_MOUSE_RIGHT);
 
+    if (IsKeyPressed(KEY_LEFT_SHIFT))   mu_input_keypressed(ctx, MU_KEY_SHIFT);
+    if (IsKeyPressed(KEY_ENTER))        mu_input_keypressed(ctx, MU_KEY_RETURN);
+    if (IsKeyPressed(KEY_LEFT_CONTROL)) mu_input_keypressed(ctx, MU_KEY_CTRL);
+    if (IsKeyPressed(KEY_BACKSPACE))    mu_input_keypressed(ctx, MU_KEY_BACKSPACE);
+    if (IsKeyPressed(KEY_LEFT_ALT))     mu_input_keypressed(ctx, MU_KEY_ALT);
+
+    if (IsKeyPressed(KEY_UP))       mu_input_keypressed(ctx, MU_KEY_UP);
+    if (IsKeyPressed(KEY_DOWN))     mu_input_keypressed(ctx, MU_KEY_DOWN);
+    if (IsKeyPressed(KEY_LEFT))     mu_input_keypressed(ctx, MU_KEY_LEFT);
+    if (IsKeyPressed(KEY_RIGHT))    mu_input_keypressed(ctx, MU_KEY_RIGHT);
 
     if (IsKeyDown(KEY_LEFT_SHIFT)) mu_input_keydown(ctx, MU_KEY_SHIFT);
     if (IsKeyDown(KEY_ENTER)) mu_input_keydown(ctx, MU_KEY_RETURN);
     if (IsKeyDown(KEY_LEFT_CONTROL)) mu_input_keydown(ctx, MU_KEY_CTRL);
     if (IsKeyDown(KEY_BACKSPACE)) mu_input_keydown(ctx, MU_KEY_BACKSPACE);
     if (IsKeyDown(KEY_LEFT_ALT)) mu_input_keydown(ctx, MU_KEY_ALT);
+
+    if (IsKeyDown(KEY_UP))       mu_input_keydown(ctx, MU_KEY_UP);
+    if (IsKeyDown(KEY_DOWN))     mu_input_keydown(ctx, MU_KEY_DOWN);
+    if (IsKeyDown(KEY_LEFT))     mu_input_keydown(ctx, MU_KEY_LEFT);
+    if (IsKeyDown(KEY_RIGHT))    mu_input_keydown(ctx, MU_KEY_RIGHT);
 
     if (IsKeyUp(KEY_LEFT_SHIFT)) mu_input_keyup(ctx, MU_KEY_SHIFT);
     if (IsKeyUp(KEY_ENTER)) mu_input_keyup(ctx, MU_KEY_RETURN);
